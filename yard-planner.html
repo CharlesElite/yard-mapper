@@ -615,6 +615,7 @@
         <div class="toolbar-group">
             <button class="toolbar-btn" id="new-property-btn">New Property</button>
             <button class="toolbar-btn" id="edit-boundary-btn">Edit Boundary</button>
+            <button class="toolbar-btn" id="templates-btn">Templates</button>
         </div>
 
         <div class="toolbar-group">
@@ -630,6 +631,13 @@
         <div class="toolbar-group">
             <button class="toolbar-btn" id="measure-btn">Measure</button>
             <button class="toolbar-btn" id="fit-to-property-btn">Fit to Property</button>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="toolbar-btn" id="upload-bg-btn">Upload Background</button>
+            <button class="toolbar-btn" id="setbacks-btn">Setbacks</button>
+            <button class="toolbar-btn" id="stats-btn">Stats</button>
+            <button class="toolbar-btn" id="sun-sim-btn">Sun Simulator</button>
         </div>
 
         <div class="toolbar-group">
@@ -783,10 +791,13 @@
 
                 <h3 style="font-size: 16px; margin: 15px 0 10px 0;">Quick Start:</h3>
                 <ol style="margin-left: 20px; line-height: 1.8;">
-                    <li>Define your property boundary (rectangular, polygon, or click-to-plot)</li>
+                    <li>Define your property boundary or load a template</li>
+                    <li>Upload a background image to trace over (optional)</li>
                     <li>Drag objects from the sidebar onto your property</li>
                     <li>Move, resize, and rotate objects as needed</li>
-                    <li>Use the measure tool to check distances</li>
+                    <li>Add setback lines for building regulations</li>
+                    <li>Use Stats to see property coverage and areas</li>
+                    <li>Try the Sun Simulator to see shade patterns</li>
                     <li>Save your work or export as PNG</li>
                 </ol>
 
@@ -795,6 +806,8 @@
                     <li><strong>Pan:</strong> Shift + drag or middle-mouse drag</li>
                     <li><strong>Zoom:</strong> Mouse wheel</li>
                     <li><strong>Rotate:</strong> Drag the rotation handle (snaps to 15°)</li>
+                    <li><strong>Add Notes:</strong> Right-click any object to add a note</li>
+                    <li><strong>View Notes:</strong> Hover over an object to see its note</li>
                     <li><strong>Delete:</strong> Select object and press Delete/Backspace</li>
                     <li><strong>Duplicate:</strong> Select object and press Ctrl+D</li>
                     <li><strong>Undo/Redo:</strong> Ctrl+Z / Ctrl+Shift+Z</li>
@@ -851,8 +864,77 @@
         </div>
     </div>
 
+    <!-- Setbacks Modal -->
+    <div id="setbacks-modal" class="modal">
+        <div class="modal-content">
+            <h2>Property Setbacks</h2>
+            <p style="color: #64748b; margin-bottom: 20px;">Define minimum distances from property edges where building is not allowed.</p>
+
+            <div class="form-group">
+                <label>Front Setback (feet):</label>
+                <input type="number" id="setback-front" value="30" min="0">
+            </div>
+
+            <div class="form-group">
+                <label>Back Setback (feet):</label>
+                <input type="number" id="setback-back" value="20" min="0">
+            </div>
+
+            <div class="form-group">
+                <label>Left Setback (feet):</label>
+                <input type="number" id="setback-left" value="10" min="0">
+            </div>
+
+            <div class="form-group">
+                <label>Right Setback (feet):</label>
+                <input type="number" id="setback-right" value="10" min="0">
+            </div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="cancel-setbacks-btn">Cancel</button>
+                <button class="modal-btn primary" id="apply-setbacks-btn">Apply Setbacks</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Panel (floating) -->
+    <div id="stats-panel" style="display: none; position: fixed; top: 100px; right: 24px; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2); z-index: 150; min-width: 280px; border: 2px solid rgba(102, 126, 234, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 16px; font-weight: 700; color: #667eea; margin: 0;">Property Statistics</h3>
+            <button onclick="document.getElementById('stats-panel').style.display='none'" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #94a3b8;">×</button>
+        </div>
+        <div id="stats-content"></div>
+    </div>
+
+    <!-- Sun Simulator Panel -->
+    <div id="sun-panel" style="display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: white; padding: 20px 30px; border-radius: 16px; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2); z-index: 150; border: 2px solid rgba(102, 126, 234, 0.1);">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <label style="font-weight: 600; color: #667eea; font-size: 14px;">Time of Day:</label>
+            <input type="range" id="sun-time-slider" min="6" max="18" value="12" step="0.5" style="width: 300px; accent-color: #667eea;">
+            <span id="sun-time-label" style="font-weight: 700; color: #2d3748; min-width: 80px;">12:00 PM</span>
+            <button onclick="document.getElementById('sun-panel').style.display='none'" class="toolbar-btn" style="margin: 0;">Close</button>
+        </div>
+    </div>
+
+    <!-- Templates Modal -->
+    <div id="templates-modal" class="modal">
+        <div class="modal-content">
+            <h2>Property Templates</h2>
+            <p style="color: #64748b; margin-bottom: 24px;">Start with a pre-designed layout</p>
+
+            <div id="templates-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <!-- Templates will be added here -->
+            </div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="cancel-templates-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Hidden file input for loading -->
     <input type="file" id="load-file-input" accept=".json">
+    <input type="file" id="bg-image-input" accept="image/*" style="display: none;">
 
     <script>
         // ==================== Global Variables ====================
@@ -990,8 +1072,16 @@
             document.getElementById('duplicate-btn').addEventListener('click', duplicateSelected);
             document.getElementById('help-btn').addEventListener('click', showWelcomeModal);
 
+            // New feature buttons
+            document.getElementById('upload-bg-btn').addEventListener('click', () => document.getElementById('bg-image-input').click());
+            document.getElementById('setbacks-btn').addEventListener('click', showSetbacksModal);
+            document.getElementById('stats-btn').addEventListener('click', toggleStatsPanel);
+            document.getElementById('sun-sim-btn').addEventListener('click', toggleSunSimulator);
+            document.getElementById('templates-btn').addEventListener('click', showTemplatesModal);
+
             // Load file input
             document.getElementById('load-file-input').addEventListener('change', loadProject);
+            document.getElementById('bg-image-input').addEventListener('change', uploadBackgroundImage);
 
             // Modal buttons
             document.getElementById('method-rectangular').addEventListener('click', () => switchBoundaryMethod('rectangular'));
@@ -1004,6 +1094,16 @@
             // Custom object modal buttons
             document.getElementById('cancel-custom-obj-btn').addEventListener('click', hideCustomObjectModal);
             document.getElementById('create-custom-obj-btn').addEventListener('click', createCustomObject);
+
+            // Setbacks modal buttons
+            document.getElementById('cancel-setbacks-btn').addEventListener('click', hideSetbacksModal);
+            document.getElementById('apply-setbacks-btn').addEventListener('click', applySetbacks);
+
+            // Templates modal button
+            document.getElementById('cancel-templates-btn').addEventListener('click', hideTemplatesModal);
+
+            // Sun simulator slider
+            document.getElementById('sun-time-slider').addEventListener('input', updateSunPosition);
 
             // Welcome modal button
             document.getElementById('close-welcome-btn').addEventListener('click', hideWelcomeModal);
@@ -1319,6 +1419,347 @@
             document.getElementById('custom-obj-height').value = '10';
 
             hideCustomObjectModal();
+        }
+
+        // ==================== New Features ====================
+
+        // Background Image Upload
+        let backgroundImage = null;
+        let bgOpacity = 0.5;
+
+        function uploadBackgroundImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                fabric.Image.fromURL(event.target.result, function(img) {
+                    // Scale image to fit canvas
+                    const scale = Math.max(
+                        canvas.width / img.width,
+                        canvas.height / img.height
+                    );
+                    img.scale(scale);
+                    img.set({
+                        left: canvas.width / 2,
+                        top: canvas.height / 2,
+                        originX: 'center',
+                        originY: 'center',
+                        opacity: bgOpacity,
+                        selectable: false,
+                        evented: false,
+                        isBackgroundImage: true
+                    });
+
+                    // Remove old background image
+                    if (backgroundImage) {
+                        canvas.remove(backgroundImage);
+                    }
+
+                    backgroundImage = img;
+                    canvas.add(backgroundImage);
+                    canvas.sendToBack(backgroundImage);
+                    canvas.renderAll();
+                    saveState();
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Setbacks
+        let setbackLines = [];
+
+        function showSetbacksModal() {
+            document.getElementById('setbacks-modal').classList.add('visible');
+        }
+
+        function hideSetbacksModal() {
+            document.getElementById('setbacks-modal').classList.remove('visible');
+        }
+
+        function applySetbacks() {
+            if (!propertyBoundary) {
+                alert('Please define a property boundary first.');
+                hideSetbacksModal();
+                return;
+            }
+
+            const front = parseFloat(document.getElementById('setback-front').value);
+            const back = parseFloat(document.getElementById('setback-back').value);
+            const left = parseFloat(document.getElementById('setback-left').value);
+            const right = parseFloat(document.getElementById('setback-right').value);
+
+            // Remove old setback lines
+            setbackLines.forEach(line => canvas.remove(line));
+            setbackLines = [];
+
+            const scaleMultiplier = 20 / gridScale;
+
+            // Only works for rectangular boundaries for now
+            if (propertyBoundary.boundaryData && propertyBoundary.boundaryData.type === 'rectangular') {
+                const bounds = propertyBoundary.getBoundingRect();
+
+                // Create setback lines
+                const lines = [
+                    // Front (top)
+                    new fabric.Line([
+                        bounds.left + left * scaleMultiplier,
+                        bounds.top + front * scaleMultiplier,
+                        bounds.left + bounds.width - right * scaleMultiplier,
+                        bounds.top + front * scaleMultiplier
+                    ], { stroke: '#e74c3c', strokeWidth: 2, strokeDashArray: [10, 5] }),
+                    // Back (bottom)
+                    new fabric.Line([
+                        bounds.left + left * scaleMultiplier,
+                        bounds.top + bounds.height - back * scaleMultiplier,
+                        bounds.left + bounds.width - right * scaleMultiplier,
+                        bounds.top + bounds.height - back * scaleMultiplier
+                    ], { stroke: '#e74c3c', strokeWidth: 2, strokeDashArray: [10, 5] }),
+                    // Left
+                    new fabric.Line([
+                        bounds.left + left * scaleMultiplier,
+                        bounds.top + front * scaleMultiplier,
+                        bounds.left + left * scaleMultiplier,
+                        bounds.top + bounds.height - back * scaleMultiplier
+                    ], { stroke: '#e74c3c', strokeWidth: 2, strokeDashArray: [10, 5] }),
+                    // Right
+                    new fabric.Line([
+                        bounds.left + bounds.width - right * scaleMultiplier,
+                        bounds.top + front * scaleMultiplier,
+                        bounds.left + bounds.width - right * scaleMultiplier,
+                        bounds.top + bounds.height - back * scaleMultiplier
+                    ], { stroke: '#e74c3c', strokeWidth: 2, strokeDashArray: [10, 5] })
+                ];
+
+                lines.forEach(line => {
+                    line.set({ selectable: false, evented: false, isSetback: true });
+                    canvas.add(line);
+                    setbackLines.push(line);
+                });
+
+                canvas.renderAll();
+            }
+
+            hideSetbacksModal();
+        }
+
+        // Property Statistics
+        function toggleStatsPanel() {
+            const panel = document.getElementById('stats-panel');
+            if (panel.style.display === 'none') {
+                updateStats();
+                panel.style.display = 'block';
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        function updateStats() {
+            const scaleMultiplier = 20 / gridScale;
+            const content = document.getElementById('stats-content');
+
+            let propertyArea = 0;
+            let buildingArea = 0;
+            let gardenArea = 0;
+            let hardscapeArea = 0;
+
+            // Calculate property area
+            if (propertyBoundary && propertyBoundary.boundaryData) {
+                if (propertyBoundary.boundaryData.type === 'rectangular') {
+                    propertyArea = propertyBoundary.boundaryData.width * propertyBoundary.boundaryData.depth;
+                }
+            }
+
+            // Calculate object areas
+            canvas.getObjects().forEach(obj => {
+                if (obj.objectType === 'placed-object' && obj.objectData) {
+                    const width = (obj.width * obj.scaleX) / scaleMultiplier;
+                    const height = (obj.height * obj.scaleY) / scaleMultiplier;
+                    const area = width * height;
+
+                    if (obj.category === 'Structures') {
+                        buildingArea += area;
+                    } else if (obj.category === 'Gardens') {
+                        gardenArea += area;
+                    } else if (obj.category === 'Hardscape') {
+                        hardscapeArea += area;
+                    }
+                }
+            });
+
+            const openSpace = propertyArea - buildingArea - gardenArea - hardscapeArea;
+            const buildingCoverage = propertyArea > 0 ? (buildingArea / propertyArea * 100) : 0;
+
+            content.innerHTML = `
+                <div style="display: grid; gap: 12px;">
+                    <div style="display: flex; justify-content: space-between; padding: 8px; background: #f8fafc; border-radius: 8px;">
+                        <span style="color: #64748b; font-weight: 500;">Total Lot:</span>
+                        <span style="font-weight: 700; color: #667eea;">${propertyArea.toFixed(0)} sq ft</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px;">
+                        <span style="color: #64748b;">Buildings:</span>
+                        <span style="font-weight: 600;">${buildingArea.toFixed(0)} sq ft</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px;">
+                        <span style="color: #64748b;">Gardens:</span>
+                        <span style="font-weight: 600;">${gardenArea.toFixed(0)} sq ft</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px;">
+                        <span style="color: #64748b;">Hardscape:</span>
+                        <span style="font-weight: 600;">${hardscapeArea.toFixed(0)} sq ft</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px; background: #f0fdf4; border-radius: 8px;">
+                        <span style="color: #16a34a; font-weight: 500;">Open Space:</span>
+                        <span style="font-weight: 700; color: #16a34a;">${openSpace.toFixed(0)} sq ft</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px; border-top: 2px solid #e2e8f0; margin-top: 8px;">
+                        <span style="color: #64748b; font-weight: 500;">Building Coverage:</span>
+                        <span style="font-weight: 700; color: #667eea;">${buildingCoverage.toFixed(1)}%</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Sun Simulator
+        let sunIndicator = null;
+        let shadeOverlays = [];
+
+        function toggleSunSimulator() {
+            const panel = document.getElementById('sun-panel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                updateSunPosition();
+            } else {
+                panel.style.display = 'none';
+                removeSunIndicator();
+            }
+        }
+
+        function updateSunPosition() {
+            const time = parseFloat(document.getElementById('sun-time-slider').value);
+            const hours = Math.floor(time);
+            const minutes = (time - hours) * 60;
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
+            document.getElementById('sun-time-label').textContent =
+                `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+
+            // Remove old sun indicator
+            if (sunIndicator) {
+                canvas.remove(sunIndicator);
+            }
+
+            // Calculate sun position (simplified - moves from east to west)
+            const angle = ((time - 6) / 12) * Math.PI; // 6AM = 0°, 6PM = 180°
+            const sunX = canvas.width * (time - 6) / 12;
+            const sunY = 50 + Math.sin(angle) * -30; // Arc across top
+
+            // Draw sun indicator
+            const sun = new fabric.Group([
+                new fabric.Circle({
+                    radius: 20,
+                    fill: '#fbbf24',
+                    stroke: '#f59e0b',
+                    strokeWidth: 2
+                }),
+                new fabric.Text('☀', {
+                    fontSize: 24,
+                    fill: '#fff',
+                    originX: 'center',
+                    originY: 'center',
+                    top: -2
+                })
+            ], {
+                left: sunX,
+                top: sunY,
+                selectable: false,
+                evented: false,
+                isSunIndicator: true
+            });
+
+            sunIndicator = sun;
+            canvas.add(sunIndicator);
+            canvas.bringToFront(sunIndicator);
+            canvas.renderAll();
+        }
+
+        function removeSunIndicator() {
+            if (sunIndicator) {
+                canvas.remove(sunIndicator);
+                sunIndicator = null;
+                canvas.renderAll();
+            }
+        }
+
+        // Object Notes
+        canvas.on('mouse:down', function(options) {
+            if (options.button === 3 && options.target && options.target.objectType === 'placed-object') {
+                // Right-click on object
+                const obj = options.target;
+                const currentNote = obj.objectNote || '';
+                const newNote = prompt('Add a note to this object:', currentNote);
+                if (newNote !== null) {
+                    obj.objectNote = newNote;
+                    saveState();
+                }
+                options.e.preventDefault();
+            }
+        });
+
+        // Show notes on hover
+        canvas.on('mouse:over', function(options) {
+            if (options.target && options.target.objectType === 'placed-object' && options.target.objectNote) {
+                // Create tooltip
+                const tooltip = document.createElement('div');
+                tooltip.id = 'object-note-tooltip';
+                tooltip.style.cssText = `
+                    position: fixed;
+                    background: rgba(0,0,0,0.9);
+                    color: white;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    z-index: 1000;
+                    max-width: 200px;
+                    pointer-events: none;
+                `;
+                tooltip.textContent = options.target.objectNote;
+                document.body.appendChild(tooltip);
+
+                const updateTooltipPosition = (e) => {
+                    tooltip.style.left = e.clientX + 15 + 'px';
+                    tooltip.style.top = e.clientY + 15 + 'px';
+                };
+
+                canvas.on('mouse:move', updateTooltipPosition);
+                options.target._updateTooltip = updateTooltipPosition;
+            }
+        });
+
+        canvas.on('mouse:out', function(options) {
+            const tooltip = document.getElementById('object-note-tooltip');
+            if (tooltip) {
+                tooltip.remove();
+            }
+            if (options.target && options.target._updateTooltip) {
+                canvas.off('mouse:move', options.target._updateTooltip);
+            }
+        });
+
+        // Templates
+        function showTemplatesModal() {
+            document.getElementById('templates-modal').classList.add('visible');
+            loadTemplates();
+        }
+
+        function hideTemplatesModal() {
+            document.getElementById('templates-modal').classList.remove('visible');
+        }
+
+        function loadTemplates() {
+            // This will be implemented later
+            const grid = document.getElementById('templates-grid');
+            grid.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 40px;">Templates coming soon!</p>';
         }
 
         // ==================== Layers Panel ====================
