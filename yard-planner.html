@@ -1203,6 +1203,59 @@
                 isPanning = false;
                 canvas.selection = true;
             });
+
+            // Object Notes (right-click)
+            canvas.on('mouse:down', function(options) {
+                if (options.button === 3 && options.target && options.target.objectType === 'placed-object') {
+                    const obj = options.target;
+                    const currentNote = obj.objectNote || '';
+                    const newNote = prompt('Add a note to this object:', currentNote);
+                    if (newNote !== null) {
+                        obj.objectNote = newNote;
+                        saveState();
+                    }
+                    options.e.preventDefault();
+                }
+            });
+
+            // Show notes on hover
+            canvas.on('mouse:over', function(options) {
+                if (options.target && options.target.objectType === 'placed-object' && options.target.objectNote) {
+                    const tooltip = document.createElement('div');
+                    tooltip.id = 'object-note-tooltip';
+                    tooltip.style.cssText = `
+                        position: fixed;
+                        background: rgba(0,0,0,0.9);
+                        color: white;
+                        padding: 8px 12px;
+                        border-radius: 6px;
+                        font-size: 12px;
+                        z-index: 1000;
+                        max-width: 200px;
+                        pointer-events: none;
+                    `;
+                    tooltip.textContent = options.target.objectNote;
+                    document.body.appendChild(tooltip);
+
+                    const updateTooltipPosition = (e) => {
+                        tooltip.style.left = e.clientX + 15 + 'px';
+                        tooltip.style.top = e.clientY + 15 + 'px';
+                    };
+
+                    canvas.on('mouse:move', updateTooltipPosition);
+                    options.target._updateTooltip = updateTooltipPosition;
+                }
+            });
+
+            canvas.on('mouse:out', function(options) {
+                const tooltip = document.getElementById('object-note-tooltip');
+                if (tooltip) {
+                    tooltip.remove();
+                }
+                if (options.target && options.target._updateTooltip) {
+                    canvas.off('mouse:move', options.target._updateTooltip);
+                }
+            });
         }
 
         function resizeCanvas() {
@@ -1690,61 +1743,6 @@
                 canvas.renderAll();
             }
         }
-
-        // Object Notes
-        canvas.on('mouse:down', function(options) {
-            if (options.button === 3 && options.target && options.target.objectType === 'placed-object') {
-                // Right-click on object
-                const obj = options.target;
-                const currentNote = obj.objectNote || '';
-                const newNote = prompt('Add a note to this object:', currentNote);
-                if (newNote !== null) {
-                    obj.objectNote = newNote;
-                    saveState();
-                }
-                options.e.preventDefault();
-            }
-        });
-
-        // Show notes on hover
-        canvas.on('mouse:over', function(options) {
-            if (options.target && options.target.objectType === 'placed-object' && options.target.objectNote) {
-                // Create tooltip
-                const tooltip = document.createElement('div');
-                tooltip.id = 'object-note-tooltip';
-                tooltip.style.cssText = `
-                    position: fixed;
-                    background: rgba(0,0,0,0.9);
-                    color: white;
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    font-size: 12px;
-                    z-index: 1000;
-                    max-width: 200px;
-                    pointer-events: none;
-                `;
-                tooltip.textContent = options.target.objectNote;
-                document.body.appendChild(tooltip);
-
-                const updateTooltipPosition = (e) => {
-                    tooltip.style.left = e.clientX + 15 + 'px';
-                    tooltip.style.top = e.clientY + 15 + 'px';
-                };
-
-                canvas.on('mouse:move', updateTooltipPosition);
-                options.target._updateTooltip = updateTooltipPosition;
-            }
-        });
-
-        canvas.on('mouse:out', function(options) {
-            const tooltip = document.getElementById('object-note-tooltip');
-            if (tooltip) {
-                tooltip.remove();
-            }
-            if (options.target && options.target._updateTooltip) {
-                canvas.off('mouse:move', options.target._updateTooltip);
-            }
-        });
 
         // Templates
         function showTemplatesModal() {
