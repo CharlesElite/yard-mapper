@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Yard & Property Planner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #f5f5f0;
+        }
+
+        /* Toolbar */
+        #toolbar {
+            background: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+        }
+
+        #toolbar h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-right: 20px;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 0 15px;
+            border-left: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .toolbar-group:first-of-type {
+            border-left: none;
+        }
+
+        .toolbar-btn {
+            background: #34495e;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            background: #4a6278;
+        }
+
+        .toolbar-btn:active {
+            background: #2c3e50;
+        }
+
+        .toolbar-btn.active {
+            background: #3498db;
+        }
+
+        input[type="number"], select {
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        #toolbar label {
+            font-size: 13px;
+            color: #ecf0f1;
+        }
+
+        .layer-item label {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        /* Main container */
+        #main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 280px;
+            background: #ecf0f1;
+            border-right: 1px solid #bdc3c7;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            border-bottom: 1px solid #bdc3c7;
+        }
+
+        .sidebar-section h3 {
+            font-size: 14px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .object-category {
+            margin-bottom: 15px;
+        }
+
+        .category-header {
+            font-size: 13px;
+            font-weight: 600;
+            color: #34495e;
+            margin-bottom: 8px;
+            padding: 5px;
+            background: #d5d8dc;
+            border-radius: 3px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .category-header:hover {
+            background: #cfd2d6;
+        }
+
+        .category-items {
+            display: grid;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        .object-item {
+            padding: 8px 10px;
+            background: white;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            cursor: grab;
+            font-size: 12px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .object-item:hover {
+            background: #e8f4f8;
+            border-color: #3498db;
+            transform: translateX(3px);
+        }
+
+        .object-item:active {
+            cursor: grabbing;
+        }
+
+        .object-color-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+
+        /* Layers panel */
+        .layer-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: white;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .layer-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        /* Canvas container */
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #f5f5f0;
+        }
+
+        #canvas-wrapper {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #yard-canvas {
+            display: block;
+        }
+
+        /* Scale indicator */
+        #scale-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-size: 12px;
+            z-index: 100;
+        }
+
+        .scale-bar {
+            margin-top: 8px;
+            height: 3px;
+            background: #2c3e50;
+            position: relative;
+        }
+
+        .scale-bar::before,
+        .scale-bar::after {
+            content: '';
+            position: absolute;
+            width: 1px;
+            height: 8px;
+            background: #2c3e50;
+            top: -2px;
+        }
+
+        .scale-bar::before {
+            left: 0;
+        }
+
+        .scale-bar::after {
+            right: 0;
+        }
+
+        /* Zoom indicator */
+        #zoom-indicator {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 8px 12px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-size: 12px;
+            z-index: 100;
+        }
+
+        /* Properties panel */
+        #properties-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 12px 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-size: 12px;
+            min-width: 200px;
+            max-width: 300px;
+            z-index: 100;
+            display: none;
+        }
+
+        #properties-panel.visible {
+            display: block;
+        }
+
+        #properties-panel h4 {
+            font-size: 13px;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .property-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .property-row:last-child {
+            border-bottom: none;
+        }
+
+        .property-label {
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+
+        .property-value {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.visible {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h2 {
+            font-size: 20px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .modal-content h3 {
+            font-size: 16px;
+            color: #34495e;
+            margin: 20px 0 10px 0;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .modal-btn.primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .modal-btn.primary:hover {
+            background: #2980b9;
+        }
+
+        .modal-btn.secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .modal-btn.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .boundary-method-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .boundary-method-selector button {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #bdc3c7;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .boundary-method-selector button.active {
+            border-color: #3498db;
+            background: #e8f4f8;
+            color: #3498db;
+        }
+
+        .boundary-method-selector button:hover {
+            border-color: #3498db;
+        }
+
+        .polygon-coords-input {
+            margin-top: 10px;
+        }
+
+        .coord-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .coord-row input {
+            flex: 1;
+        }
+
+        .coord-row button {
+            padding: 6px 10px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .coord-row button:hover {
+            background: #c0392b;
+        }
+
+        #add-coord-btn {
+            padding: 8px 15px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        #add-coord-btn:hover {
+            background: #229954;
+        }
+
+        /* Hidden file input */
+        #load-file-input {
+            display: none;
+        }
+
+        /* Measure mode indicator */
+        .measure-instruction {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            background: rgba(52, 152, 219, 0.95);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 13px;
+            z-index: 100;
+            display: none;
+        }
+
+        .measure-instruction.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Toolbar -->
+    <div id="toolbar">
+        <h1>Yard & Property Planner</h1>
+
+        <div class="toolbar-group">
+            <button class="toolbar-btn" id="new-property-btn">New Property</button>
+            <button class="toolbar-btn" id="edit-boundary-btn">Edit Boundary</button>
+        </div>
+
+        <div class="toolbar-group">
+            <label>Grid Scale:</label>
+            <select id="grid-scale-select">
+                <option value="1">1 ft/dot</option>
+                <option value="2">2 ft/dot</option>
+                <option value="5">5 ft/dot</option>
+                <option value="10">10 ft/dot</option>
+            </select>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="toolbar-btn" id="measure-btn">Measure</button>
+            <button class="toolbar-btn" id="fit-to-property-btn">Fit to Property</button>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="toolbar-btn" id="undo-btn" title="Undo (Ctrl+Z)">↶ Undo</button>
+            <button class="toolbar-btn" id="redo-btn" title="Redo (Ctrl+Shift+Z)">↷ Redo</button>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="toolbar-btn" id="save-btn">Save</button>
+            <button class="toolbar-btn" id="load-btn">Load</button>
+            <button class="toolbar-btn" id="export-btn">Export PNG</button>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="toolbar-btn" id="delete-btn" title="Delete (Del)">Delete</button>
+            <button class="toolbar-btn" id="duplicate-btn" title="Duplicate (Ctrl+D)">Duplicate</button>
+        </div>
+
+        <div class="toolbar-group" style="margin-left: auto;">
+            <button class="toolbar-btn" id="help-btn" title="Show Help">? Help</button>
+        </div>
+    </div>
+
+    <!-- Main container -->
+    <div id="main-container">
+        <!-- Sidebar -->
+        <div id="sidebar">
+            <!-- Object palette -->
+            <div class="sidebar-section">
+                <h3>Object Palette</h3>
+                <div id="object-palette"></div>
+            </div>
+
+            <!-- Layers -->
+            <div class="sidebar-section">
+                <h3>Layers</h3>
+                <div id="layers-panel"></div>
+            </div>
+        </div>
+
+        <!-- Canvas container -->
+        <div id="canvas-container">
+            <div id="canvas-wrapper">
+                <canvas id="yard-canvas"></canvas>
+            </div>
+
+            <!-- Zoom indicator -->
+            <div id="zoom-indicator">Zoom: <span id="zoom-value">100</span>%</div>
+
+            <!-- Scale indicator -->
+            <div id="scale-indicator">
+                <div>1 dot = <span id="scale-value">1</span> ft</div>
+                <div class="scale-bar" id="scale-bar" style="width: 100px;"></div>
+                <div style="text-align: center; margin-top: 3px; font-size: 11px;">
+                    <span id="scale-bar-value">100</span> ft
+                </div>
+            </div>
+
+            <!-- Measure mode instruction -->
+            <div class="measure-instruction" id="measure-instruction">
+                Click two points to measure distance
+            </div>
+
+            <!-- Properties panel -->
+            <div id="properties-panel">
+                <h4>Properties</h4>
+                <div id="properties-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Property Modal -->
+    <div id="new-property-modal" class="modal">
+        <div class="modal-content">
+            <h2>Define Property Boundary</h2>
+
+            <div class="boundary-method-selector">
+                <button id="method-rectangular" class="active">Rectangular Lot</button>
+                <button id="method-polygon">Polygon Coordinates</button>
+                <button id="method-click">Click to Plot</button>
+            </div>
+
+            <!-- Rectangular method -->
+            <div id="rectangular-form" class="boundary-form">
+                <div class="form-group">
+                    <label>Width (feet):</label>
+                    <input type="number" id="rect-width" value="510" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Depth (feet):</label>
+                    <input type="number" id="rect-depth" value="230" min="1">
+                </div>
+            </div>
+
+            <!-- Polygon coordinates method -->
+            <div id="polygon-form" class="boundary-form" style="display: none;">
+                <div class="form-group">
+                    <label>Corner Coordinates (x, y in feet):</label>
+                    <div id="polygon-coords-input" class="polygon-coords-input">
+                        <div class="coord-row">
+                            <input type="number" placeholder="X" value="0" class="coord-x">
+                            <input type="number" placeholder="Y" value="0" class="coord-y">
+                            <button onclick="removeCoordRow(this)">Remove</button>
+                        </div>
+                        <div class="coord-row">
+                            <input type="number" placeholder="X" value="510" class="coord-x">
+                            <input type="number" placeholder="Y" value="0" class="coord-y">
+                            <button onclick="removeCoordRow(this)">Remove</button>
+                        </div>
+                        <div class="coord-row">
+                            <input type="number" placeholder="X" value="510" class="coord-x">
+                            <input type="number" placeholder="Y" value="230" class="coord-y">
+                            <button onclick="removeCoordRow(this)">Remove</button>
+                        </div>
+                        <div class="coord-row">
+                            <input type="number" placeholder="X" value="0" class="coord-x">
+                            <input type="number" placeholder="Y" value="230" class="coord-y">
+                            <button onclick="removeCoordRow(this)">Remove</button>
+                        </div>
+                    </div>
+                    <button id="add-coord-btn" onclick="addCoordRow()">Add Point</button>
+                </div>
+            </div>
+
+            <!-- Click to plot method -->
+            <div id="click-form" class="boundary-form" style="display: none;">
+                <p style="color: #7f8c8d; font-size: 14px; line-height: 1.5;">
+                    Click this button, then click on the canvas to plot points.
+                    Running dimensions will be shown between points.
+                    Click "Confirm Boundary" when done.
+                </p>
+                <button id="start-click-plot-btn" class="modal-btn primary" style="margin-top: 15px;">
+                    Start Plotting
+                </button>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="cancel-boundary-btn">Cancel</button>
+                <button class="modal-btn primary" id="confirm-boundary-btn">Create Boundary</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welcome Modal -->
+    <div id="welcome-modal" class="modal">
+        <div class="modal-content">
+            <h2>Welcome to Yard & Property Planner!</h2>
+
+            <div style="margin: 20px 0; line-height: 1.6;">
+                <p style="margin-bottom: 15px;">This tool helps you plan and visualize your property layout with an intuitive drag-and-drop interface.</p>
+
+                <h3 style="font-size: 16px; margin: 15px 0 10px 0;">Quick Start:</h3>
+                <ol style="margin-left: 20px; line-height: 1.8;">
+                    <li>Define your property boundary (rectangular, polygon, or click-to-plot)</li>
+                    <li>Drag objects from the sidebar onto your property</li>
+                    <li>Move, resize, and rotate objects as needed</li>
+                    <li>Use the measure tool to check distances</li>
+                    <li>Save your work or export as PNG</li>
+                </ol>
+
+                <h3 style="font-size: 16px; margin: 15px 0 10px 0;">Tips:</h3>
+                <ul style="margin-left: 20px; line-height: 1.8;">
+                    <li><strong>Pan:</strong> Shift + drag or middle-mouse drag</li>
+                    <li><strong>Zoom:</strong> Mouse wheel</li>
+                    <li><strong>Rotate:</strong> Drag the rotation handle (snaps to 15°)</li>
+                    <li><strong>Delete:</strong> Select object and press Delete/Backspace</li>
+                    <li><strong>Duplicate:</strong> Select object and press Ctrl+D</li>
+                    <li><strong>Undo/Redo:</strong> Ctrl+Z / Ctrl+Shift+Z</li>
+                </ul>
+
+                <p style="margin-top: 15px; color: #7f8c8d; font-size: 13px;">
+                    Your work is automatically saved to your browser. You can also save to a file for backup.
+                </p>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn primary" id="close-welcome-btn">Get Started!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Object Modal -->
+    <div id="custom-object-modal" class="modal">
+        <div class="modal-content">
+            <h2>Create Custom Object</h2>
+
+            <div class="form-group">
+                <label>Object Name:</label>
+                <input type="text" id="custom-obj-name" placeholder="e.g., Workshop, Pool, etc.">
+            </div>
+
+            <div class="form-group">
+                <label>Shape:</label>
+                <select id="custom-obj-shape">
+                    <option value="rect">Rectangle</option>
+                    <option value="circle">Circle</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Color:</label>
+                <input type="color" id="custom-obj-color" value="#95a5a6">
+            </div>
+
+            <div class="form-group">
+                <label>Width (feet):</label>
+                <input type="number" id="custom-obj-width" value="10" min="1">
+            </div>
+
+            <div class="form-group">
+                <label>Height (feet):</label>
+                <input type="number" id="custom-obj-height" value="10" min="1">
+            </div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="cancel-custom-obj-btn">Cancel</button>
+                <button class="modal-btn primary" id="create-custom-obj-btn">Create & Place</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for loading -->
+    <input type="file" id="load-file-input" accept=".json">
+
+    <script>
+        // ==================== Global Variables ====================
+        let canvas;
+        let gridScale = 1; // feet per dot
+        let propertyBoundary = null;
+        let undoStack = [];
+        let redoStack = [];
+        let measureMode = false;
+        let measurePoints = [];
+        let measureLine = null;
+        let clickPlotMode = false;
+        let clickPlotPoints = [];
+        let clickPlotLines = [];
+
+        // Object library definition
+        const objectLibrary = {
+            'Structures': [
+                { name: 'House', color: '#95a5a6', shape: 'rect', width: 40, height: 30 },
+                { name: 'Garage', color: '#7f8c8d', shape: 'rect', width: 20, height: 20 },
+                { name: 'Shed', color: '#bdc3c7', shape: 'rect', width: 10, height: 8 },
+                { name: 'Barn', color: '#8b7355', shape: 'rect', width: 30, height: 40 },
+                { name: 'Outbuilding', color: '#a0a0a0', shape: 'rect', width: 12, height: 12 }
+            ],
+            'Gardens': [
+                { name: 'Raised Bed', color: '#27ae60', shape: 'rect', width: 8, height: 4 },
+                { name: 'Garden Plot', color: '#2ecc71', shape: 'rect', width: 15, height: 15 },
+                { name: 'Greenhouse', color: '#a8e6cf', shape: 'rect', width: 12, height: 20 }
+            ],
+            'Landscape': [
+                { name: 'Tree', color: '#1e8449', shape: 'circle', width: 8, height: 8 },
+                { name: 'Tree Line', color: '#145a32', shape: 'rect', width: 30, height: 5 },
+                { name: 'Brush/Scrub', color: '#7d6608', shape: 'rect', width: 10, height: 10 },
+                { name: 'Lawn Area', color: '#7dcea0', shape: 'rect', width: 30, height: 30 }
+            ],
+            'Hardscape': [
+                { name: 'Driveway', color: '#616a6b', shape: 'rect', width: 10, height: 40 },
+                { name: 'Path/Walkway', color: '#d7ccc8', shape: 'rect', width: 3, height: 20 },
+                { name: 'Patio', color: '#bcaaa4', shape: 'rect', width: 15, height: 15 },
+                { name: 'Fence Line', color: '#5d4037', shape: 'rect', width: 2, height: 50 }
+            ],
+            'Recreation': [
+                { name: 'Playground', color: '#e74c3c', shape: 'rect', width: 20, height: 20 },
+                { name: 'Fire Pit', color: '#d35400', shape: 'circle', width: 6, height: 6 },
+                { name: 'Play Area', color: '#f39c12', shape: 'rect', width: 15, height: 15 }
+            ],
+            'Utility': [
+                { name: 'Well', color: '#5499c7', shape: 'circle', width: 3, height: 3 },
+                { name: 'Septic', color: '#85929e', shape: 'rect', width: 8, height: 12 },
+                { name: 'Compost Bin', color: '#6c3483', shape: 'rect', width: 4, height: 4 },
+                { name: 'Power Line Easement', color: '#f4d03f', shape: 'rect', width: 15, height: 50 }
+            ],
+            'Custom': []
+        };
+
+        // ==================== Initialization ====================
+        function initCanvas() {
+            const canvasWrapper = document.getElementById('canvas-wrapper');
+            const canvasEl = document.getElementById('yard-canvas');
+
+            // Set canvas size to fill container
+            canvasEl.width = canvasWrapper.clientWidth;
+            canvasEl.height = canvasWrapper.clientHeight;
+
+            canvas = new fabric.Canvas('yard-canvas', {
+                backgroundColor: '#f5f5f0',
+                selection: true,
+                preserveObjectStacking: true
+            });
+
+            // Draw initial grid
+            drawGrid();
+
+            // Setup event listeners
+            setupEventListeners();
+
+            // Try to restore from localStorage
+            restoreFromLocalStorage();
+
+            // Check if this is first use
+            const hasSeenWelcome = localStorage.getItem('yardPlannerSeenWelcome');
+            if (!hasSeenWelcome) {
+                showWelcomeModal();
+            } else if (!propertyBoundary) {
+                // If no saved state, show new property modal
+                showNewPropertyModal();
+            }
+        }
+
+        function drawGrid() {
+            // Create a dot pattern using a temporary canvas
+            const dotSpacing = 20; // pixels between dots
+            const dotRadius = 1.5;
+            const dotColor = '#b8b8b0';
+
+            // Create pattern canvas - larger to ensure dot is visible
+            const patternCanvas = document.createElement('canvas');
+            patternCanvas.width = dotSpacing;
+            patternCanvas.height = dotSpacing;
+            const patternCtx = patternCanvas.getContext('2d');
+
+            // Fill with background color first
+            patternCtx.fillStyle = '#f5f5f0';
+            patternCtx.fillRect(0, 0, dotSpacing, dotSpacing);
+
+            // Draw dot in center of pattern tile
+            patternCtx.fillStyle = dotColor;
+            patternCtx.beginPath();
+            patternCtx.arc(dotSpacing / 2, dotSpacing / 2, dotRadius, 0, 2 * Math.PI);
+            patternCtx.fill();
+
+            // Create the pattern and set as canvas background
+            const pattern = new fabric.Pattern({
+                source: patternCanvas,
+                repeat: 'repeat'
+            });
+
+            // Use setBackgroundColor with pattern
+            canvas.setBackgroundColor(pattern, canvas.renderAll.bind(canvas));
+        }
+
+        function setupEventListeners() {
+            // Toolbar buttons
+            document.getElementById('new-property-btn').addEventListener('click', showNewPropertyModal);
+            document.getElementById('edit-boundary-btn').addEventListener('click', editBoundary);
+            document.getElementById('grid-scale-select').addEventListener('change', changeGridScale);
+            document.getElementById('measure-btn').addEventListener('click', toggleMeasureMode);
+            document.getElementById('fit-to-property-btn').addEventListener('click', fitToProperty);
+            document.getElementById('undo-btn').addEventListener('click', undo);
+            document.getElementById('redo-btn').addEventListener('click', redo);
+            document.getElementById('save-btn').addEventListener('click', saveProject);
+            document.getElementById('load-btn').addEventListener('click', () => document.getElementById('load-file-input').click());
+            document.getElementById('export-btn').addEventListener('click', exportToPNG);
+            document.getElementById('delete-btn').addEventListener('click', deleteSelected);
+            document.getElementById('duplicate-btn').addEventListener('click', duplicateSelected);
+            document.getElementById('help-btn').addEventListener('click', showWelcomeModal);
+
+            // Load file input
+            document.getElementById('load-file-input').addEventListener('change', loadProject);
+
+            // Modal buttons
+            document.getElementById('method-rectangular').addEventListener('click', () => switchBoundaryMethod('rectangular'));
+            document.getElementById('method-polygon').addEventListener('click', () => switchBoundaryMethod('polygon'));
+            document.getElementById('method-click').addEventListener('click', () => switchBoundaryMethod('click'));
+            document.getElementById('cancel-boundary-btn').addEventListener('click', hideNewPropertyModal);
+            document.getElementById('confirm-boundary-btn').addEventListener('click', confirmBoundary);
+            document.getElementById('start-click-plot-btn').addEventListener('click', startClickPlot);
+
+            // Custom object modal buttons
+            document.getElementById('cancel-custom-obj-btn').addEventListener('click', hideCustomObjectModal);
+            document.getElementById('create-custom-obj-btn').addEventListener('click', createCustomObject);
+
+            // Welcome modal button
+            document.getElementById('close-welcome-btn').addEventListener('click', hideWelcomeModal);
+
+            // Canvas events
+            canvas.on('selection:created', updatePropertiesPanel);
+            canvas.on('selection:updated', updatePropertiesPanel);
+            canvas.on('selection:cleared', hidePropertiesPanel);
+            canvas.on('object:modified', saveState);
+            canvas.on('object:added', (e) => {
+                if (!e.target.isGrid && !e.target.isBoundary) {
+                    autoSave();
+                }
+            });
+            canvas.on('object:removed', autoSave);
+
+            // Grid snapping on object move
+            canvas.on('object:moving', (e) => {
+                const obj = e.target;
+                if (obj.isGrid || obj.isBoundary) return;
+
+                const gridSize = 20; // pixels
+                obj.set({
+                    left: Math.round(obj.left / gridSize) * gridSize,
+                    top: Math.round(obj.top / gridSize) * gridSize
+                });
+            });
+
+            // Angle snapping on rotation (15° increments)
+            canvas.on('object:rotating', (e) => {
+                const obj = e.target;
+                if (obj.isGrid || obj.isBoundary) return;
+
+                const snapAngle = 15;
+                obj.set({
+                    angle: Math.round(obj.angle / snapAngle) * snapAngle
+                });
+            });
+
+
+            // Canvas click for measure mode and click-to-plot
+            canvas.on('mouse:down', function(options) {
+                if (measureMode) {
+                    handleMeasureClick(options);
+                } else if (clickPlotMode) {
+                    handleClickPlot(options);
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboard);
+
+            // Window resize
+            window.addEventListener('resize', resizeCanvas);
+
+            // Mouse wheel for zoom
+            canvas.on('mouse:wheel', function(opt) {
+                const delta = opt.e.deltaY;
+                let zoom = canvas.getZoom();
+                zoom *= 0.999 ** delta;
+                if (zoom > 20) zoom = 20;
+                if (zoom < 0.1) zoom = 0.1;
+                canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+                opt.e.preventDefault();
+                opt.e.stopPropagation();
+                updateZoomIndicator();
+            });
+
+            // Pan with middle mouse or space+drag
+            let isPanning = false;
+            let lastPosX, lastPosY;
+
+            canvas.on('mouse:down', function(opt) {
+                const evt = opt.e;
+                if (evt.button === 1 || (evt.button === 0 && evt.shiftKey)) {
+                    isPanning = true;
+                    canvas.selection = false;
+                    lastPosX = evt.clientX;
+                    lastPosY = evt.clientY;
+                }
+            });
+
+            canvas.on('mouse:move', function(opt) {
+                if (isPanning) {
+                    const evt = opt.e;
+                    const vpt = canvas.viewportTransform;
+                    vpt[4] += evt.clientX - lastPosX;
+                    vpt[5] += evt.clientY - lastPosY;
+                    canvas.requestRenderAll();
+                    lastPosX = evt.clientX;
+                    lastPosY = evt.clientY;
+                }
+            });
+
+            canvas.on('mouse:up', function(opt) {
+                canvas.setViewportTransform(canvas.viewportTransform);
+                isPanning = false;
+                canvas.selection = true;
+            });
+        }
+
+        function resizeCanvas() {
+            const canvasWrapper = document.getElementById('canvas-wrapper');
+            const canvasEl = document.getElementById('yard-canvas');
+
+            canvasEl.width = canvasWrapper.clientWidth;
+            canvasEl.height = canvasWrapper.clientHeight;
+
+            canvas.setWidth(canvasWrapper.clientWidth);
+            canvas.setHeight(canvasWrapper.clientHeight);
+
+            drawGrid();
+            canvas.renderAll();
+        }
+
+        // ==================== Object Palette ====================
+        function initObjectPalette() {
+            const palette = document.getElementById('object-palette');
+            palette.innerHTML = '';
+
+            for (const [category, items] of Object.entries(objectLibrary)) {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'object-category';
+
+                const header = document.createElement('div');
+                header.className = 'category-header';
+                header.textContent = category;
+
+                const itemsDiv = document.createElement('div');
+                itemsDiv.className = 'category-items';
+
+                items.forEach(item => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'object-item';
+                    itemEl.draggable = true;
+
+                    const colorIndicator = document.createElement('div');
+                    colorIndicator.className = 'object-color-indicator';
+                    colorIndicator.style.backgroundColor = item.color;
+
+                    const label = document.createElement('span');
+                    label.textContent = item.name;
+
+                    itemEl.appendChild(colorIndicator);
+                    itemEl.appendChild(label);
+
+                    itemEl.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('objectData', JSON.stringify({ category, ...item }));
+                    });
+
+                    itemEl.addEventListener('click', () => {
+                        placeObjectAtCenter({ category, ...item });
+                    });
+
+                    itemsDiv.appendChild(itemEl);
+                });
+
+                categoryDiv.appendChild(header);
+                categoryDiv.appendChild(itemsDiv);
+                palette.appendChild(categoryDiv);
+            }
+
+            // Add custom object button
+            const customBtn = document.createElement('button');
+            customBtn.textContent = '+ Create Custom Object';
+            customBtn.style.cssText = `
+                width: 100%;
+                padding: 12px;
+                margin-top: 15px;
+                background: #3498db;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 600;
+            `;
+            customBtn.addEventListener('click', showCustomObjectModal);
+            customBtn.addEventListener('mouseenter', () => customBtn.style.background = '#2980b9');
+            customBtn.addEventListener('mouseleave', () => customBtn.style.background = '#3498db');
+            palette.appendChild(customBtn);
+
+            // Setup drag-and-drop on canvas
+            const canvasWrapper = document.getElementById('canvas-wrapper');
+            canvasWrapper.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+
+            canvasWrapper.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const data = JSON.parse(e.dataTransfer.getData('objectData'));
+                const rect = canvasWrapper.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                placeObject(data, x, y);
+            });
+        }
+
+        function placeObjectAtCenter(objectData) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            placeObject(objectData, centerX, centerY);
+        }
+
+        function placeObject(objectData, x, y) {
+            const scaleMultiplier = 20 / gridScale; // pixels per foot
+
+            let obj;
+            if (objectData.shape === 'circle') {
+                obj = new fabric.Circle({
+                    radius: (objectData.width / 2) * scaleMultiplier,
+                    fill: objectData.color,
+                    stroke: '#2c3e50',
+                    strokeWidth: 2,
+                    left: x,
+                    top: y,
+                    originX: 'center',
+                    originY: 'center',
+                    objectData: objectData,
+                    objectType: 'placed-object',
+                    category: objectData.category,
+                    cornerSize: 10,
+                    transparentCorners: false,
+                    cornerColor: '#3498db',
+                    cornerStrokeColor: '#2c3e50',
+                    borderColor: '#3498db',
+                    rotatingPointOffset: 30
+                });
+            } else {
+                obj = new fabric.Rect({
+                    width: objectData.width * scaleMultiplier,
+                    height: objectData.height * scaleMultiplier,
+                    fill: objectData.color,
+                    stroke: '#2c3e50',
+                    strokeWidth: 2,
+                    left: x,
+                    top: y,
+                    originX: 'center',
+                    originY: 'center',
+                    objectData: objectData,
+                    objectType: 'placed-object',
+                    category: objectData.category,
+                    cornerSize: 10,
+                    transparentCorners: false,
+                    cornerColor: '#3498db',
+                    cornerStrokeColor: '#2c3e50',
+                    borderColor: '#3498db',
+                    rotatingPointOffset: 30
+                });
+            }
+
+            canvas.add(obj);
+            canvas.setActiveObject(obj);
+            canvas.renderAll();
+
+            saveState();
+        }
+
+        function showWelcomeModal() {
+            document.getElementById('welcome-modal').classList.add('visible');
+        }
+
+        function hideWelcomeModal() {
+            document.getElementById('welcome-modal').classList.remove('visible');
+            localStorage.setItem('yardPlannerSeenWelcome', 'true');
+
+            // Show new property modal if no boundary exists
+            if (!propertyBoundary) {
+                showNewPropertyModal();
+            }
+        }
+
+        function showCustomObjectModal() {
+            document.getElementById('custom-object-modal').classList.add('visible');
+        }
+
+        function hideCustomObjectModal() {
+            document.getElementById('custom-object-modal').classList.remove('visible');
+        }
+
+        function createCustomObject() {
+            const name = document.getElementById('custom-obj-name').value.trim();
+            const shape = document.getElementById('custom-obj-shape').value;
+            const color = document.getElementById('custom-obj-color').value;
+            const width = parseFloat(document.getElementById('custom-obj-width').value);
+            const height = parseFloat(document.getElementById('custom-obj-height').value);
+
+            if (!name) {
+                alert('Please enter a name for the custom object.');
+                return;
+            }
+
+            if (!width || !height || width <= 0 || height <= 0) {
+                alert('Please enter valid width and height values.');
+                return;
+            }
+
+            const customObjectData = {
+                name: name,
+                color: color,
+                shape: shape,
+                width: width,
+                height: height,
+                category: 'Custom'
+            };
+
+            // Place object at center
+            placeObjectAtCenter(customObjectData);
+
+            // Reset form
+            document.getElementById('custom-obj-name').value = '';
+            document.getElementById('custom-obj-width').value = '10';
+            document.getElementById('custom-obj-height').value = '10';
+
+            hideCustomObjectModal();
+        }
+
+        // ==================== Layers Panel ====================
+        function initLayersPanel() {
+            const layersPanel = document.getElementById('layers-panel');
+            layersPanel.innerHTML = '';
+
+            const categories = Object.keys(objectLibrary);
+
+            categories.forEach(category => {
+                const layerItem = document.createElement('div');
+                layerItem.className = 'layer-item';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = true;
+                checkbox.id = `layer-${category}`;
+                checkbox.addEventListener('change', () => toggleLayerVisibility(category, checkbox.checked));
+
+                const label = document.createElement('label');
+                label.htmlFor = `layer-${category}`;
+                label.textContent = category;
+                label.style.cursor = 'pointer';
+
+                layerItem.appendChild(checkbox);
+                layerItem.appendChild(label);
+                layersPanel.appendChild(layerItem);
+            });
+        }
+
+        function toggleLayerVisibility(category, visible) {
+            const objects = canvas.getObjects().filter(obj => obj.category === category);
+            objects.forEach(obj => {
+                obj.visible = visible;
+            });
+            canvas.renderAll();
+        }
+
+        // ==================== Property Boundary ====================
+        function showNewPropertyModal() {
+            document.getElementById('new-property-modal').classList.add('visible');
+        }
+
+        function hideNewPropertyModal() {
+            document.getElementById('new-property-modal').classList.remove('visible');
+            if (clickPlotMode) {
+                cancelClickPlot();
+            }
+        }
+
+        function switchBoundaryMethod(method) {
+            // Update button states
+            document.getElementById('method-rectangular').classList.remove('active');
+            document.getElementById('method-polygon').classList.remove('active');
+            document.getElementById('method-click').classList.remove('active');
+            document.getElementById(`method-${method}`).classList.add('active');
+
+            // Show/hide forms
+            document.getElementById('rectangular-form').style.display = method === 'rectangular' ? 'block' : 'none';
+            document.getElementById('polygon-form').style.display = method === 'polygon' ? 'block' : 'none';
+            document.getElementById('click-form').style.display = method === 'click' ? 'block' : 'none';
+
+            // Update confirm button visibility
+            document.getElementById('confirm-boundary-btn').style.display = method === 'click' ? 'none' : 'block';
+        }
+
+        function confirmBoundary() {
+            const activeMethod = document.querySelector('.boundary-method-selector button.active').id;
+
+            if (activeMethod === 'method-rectangular') {
+                createRectangularBoundary();
+            } else if (activeMethod === 'method-polygon') {
+                createPolygonBoundary();
+            }
+        }
+
+        function createRectangularBoundary() {
+            const width = parseFloat(document.getElementById('rect-width').value);
+            const depth = parseFloat(document.getElementById('rect-depth').value);
+
+            if (!width || !depth || width <= 0 || depth <= 0) {
+                alert('Please enter valid width and depth values.');
+                return;
+            }
+
+            const scaleMultiplier = 20 / gridScale;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            const boundary = new fabric.Rect({
+                left: centerX - (width * scaleMultiplier / 2),
+                top: centerY - (depth * scaleMultiplier / 2),
+                width: width * scaleMultiplier,
+                height: depth * scaleMultiplier,
+                fill: 'transparent',
+                stroke: '#e74c3c',
+                strokeWidth: 4,
+                selectable: false,
+                evented: false,
+                isBoundary: true,
+                boundaryData: { width, depth, type: 'rectangular' }
+            });
+
+            if (propertyBoundary) {
+                canvas.remove(propertyBoundary);
+            }
+
+            canvas.add(boundary);
+            propertyBoundary = boundary;
+            canvas.sendToBack(boundary);
+
+            hideNewPropertyModal();
+            saveState();
+            fitToProperty();
+        }
+
+        function createPolygonBoundary() {
+            const coordInputs = document.querySelectorAll('#polygon-coords-input .coord-row');
+            const points = [];
+
+            coordInputs.forEach(row => {
+                const x = parseFloat(row.querySelector('.coord-x').value);
+                const y = parseFloat(row.querySelector('.coord-y').value);
+                if (!isNaN(x) && !isNaN(y)) {
+                    points.push({ x, y });
+                }
+            });
+
+            if (points.length < 3) {
+                alert('Please enter at least 3 points to create a polygon.');
+                return;
+            }
+
+            const scaleMultiplier = 20 / gridScale;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            // Convert points to fabric format
+            const fabricPoints = points.map(p => ({
+                x: p.x * scaleMultiplier,
+                y: p.y * scaleMultiplier
+            }));
+
+            const boundary = new fabric.Polygon(fabricPoints, {
+                left: centerX - 100,
+                top: centerY - 100,
+                fill: 'transparent',
+                stroke: '#e74c3c',
+                strokeWidth: 4,
+                selectable: false,
+                evented: false,
+                isBoundary: true,
+                boundaryData: { points, type: 'polygon' }
+            });
+
+            if (propertyBoundary) {
+                canvas.remove(propertyBoundary);
+            }
+
+            canvas.add(boundary);
+            propertyBoundary = boundary;
+            canvas.sendToBack(boundary);
+
+            hideNewPropertyModal();
+            saveState();
+            fitToProperty();
+        }
+
+        function startClickPlot() {
+            clickPlotMode = true;
+            clickPlotPoints = [];
+            clickPlotLines = [];
+            hideNewPropertyModal();
+
+            // Show instruction overlay
+            const instruction = document.createElement('div');
+            instruction.id = 'click-plot-instruction';
+            instruction.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(52, 152, 219, 0.95);
+                color: white;
+                padding: 20px 30px;
+                border-radius: 8px;
+                font-size: 16px;
+                z-index: 200;
+                text-align: center;
+            `;
+            instruction.innerHTML = `
+                <div>Click on the canvas to plot boundary points</div>
+                <div style="margin-top: 10px; font-size: 14px;">Running dimensions will be shown between points</div>
+                <button onclick="finishClickPlot()" style="margin-top: 15px; padding: 10px 20px; background: white; color: #3498db; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                    Confirm Boundary
+                </button>
+                <button onclick="cancelClickPlot()" style="margin-top: 15px; margin-left: 10px; padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Cancel
+                </button>
+            `;
+            document.getElementById('canvas-container').appendChild(instruction);
+        }
+
+        function handleClickPlot(options) {
+            if (!clickPlotMode) return;
+
+            const pointer = canvas.getPointer(options.e);
+            clickPlotPoints.push({ x: pointer.x, y: pointer.y });
+
+            // Draw point marker
+            const marker = new fabric.Circle({
+                left: pointer.x,
+                top: pointer.y,
+                radius: 5,
+                fill: '#e74c3c',
+                originX: 'center',
+                originY: 'center',
+                selectable: false,
+                evented: false,
+                isClickPlotMarker: true
+            });
+            canvas.add(marker);
+            clickPlotLines.push(marker);
+
+            // Draw line and dimension if not first point
+            if (clickPlotPoints.length > 1) {
+                const prevPoint = clickPlotPoints[clickPlotPoints.length - 2];
+                const currPoint = clickPlotPoints[clickPlotPoints.length - 1];
+
+                const line = new fabric.Line([prevPoint.x, prevPoint.y, currPoint.x, currPoint.y], {
+                    stroke: '#e74c3c',
+                    strokeWidth: 2,
+                    selectable: false,
+                    evented: false,
+                    isClickPlotMarker: true
+                });
+                canvas.add(line);
+                clickPlotLines.push(line);
+
+                // Calculate and display distance
+                const scaleMultiplier = 20 / gridScale;
+                const distance = Math.sqrt(
+                    Math.pow(currPoint.x - prevPoint.x, 2) +
+                    Math.pow(currPoint.y - prevPoint.y, 2)
+                ) / scaleMultiplier;
+
+                const midX = (prevPoint.x + currPoint.x) / 2;
+                const midY = (prevPoint.y + currPoint.y) / 2;
+
+                const dimensionText = new fabric.Text(`${distance.toFixed(1)} ft`, {
+                    left: midX,
+                    top: midY,
+                    fontSize: 12,
+                    fill: '#e74c3c',
+                    backgroundColor: 'rgba(255,255,255,0.8)',
+                    originX: 'center',
+                    originY: 'center',
+                    selectable: false,
+                    evented: false,
+                    isClickPlotMarker: true
+                });
+                canvas.add(dimensionText);
+                clickPlotLines.push(dimensionText);
+            }
+
+            canvas.renderAll();
+        }
+
+        function finishClickPlot() {
+            if (clickPlotPoints.length < 3) {
+                alert('Please plot at least 3 points to create a boundary.');
+                return;
+            }
+
+            // Remove markers and temporary lines
+            clickPlotLines.forEach(obj => canvas.remove(obj));
+            clickPlotLines = [];
+
+            // Create polygon boundary
+            const scaleMultiplier = 20 / gridScale;
+            const points = clickPlotPoints.map(p => ({
+                x: p.x,
+                y: p.y
+            }));
+
+            const boundary = new fabric.Polygon(points, {
+                fill: 'transparent',
+                stroke: '#e74c3c',
+                strokeWidth: 4,
+                selectable: false,
+                evented: false,
+                isBoundary: true,
+                boundaryData: {
+                    points: clickPlotPoints.map(p => ({
+                        x: p.x / scaleMultiplier,
+                        y: p.y / scaleMultiplier
+                    })),
+                    type: 'click-plot'
+                }
+            });
+
+            if (propertyBoundary) {
+                canvas.remove(propertyBoundary);
+            }
+
+            canvas.add(boundary);
+            propertyBoundary = boundary;
+            canvas.sendToBack(boundary);
+
+            // Remove instruction overlay
+            const instruction = document.getElementById('click-plot-instruction');
+            if (instruction) {
+                instruction.remove();
+            }
+
+            clickPlotMode = false;
+            clickPlotPoints = [];
+            canvas.renderAll();
+            saveState();
+        }
+
+        function cancelClickPlot() {
+            // Remove markers and temporary lines
+            clickPlotLines.forEach(obj => canvas.remove(obj));
+            clickPlotLines = [];
+            clickPlotPoints = [];
+            clickPlotMode = false;
+
+            // Remove instruction overlay
+            const instruction = document.getElementById('click-plot-instruction');
+            if (instruction) {
+                instruction.remove();
+            }
+
+            canvas.renderAll();
+        }
+
+        // Global functions for inline onclick handlers
+        window.finishClickPlot = finishClickPlot;
+        window.cancelClickPlot = cancelClickPlot;
+
+        function editBoundary() {
+            if (propertyBoundary) {
+                propertyBoundary.set({ selectable: true, evented: true });
+                canvas.setActiveObject(propertyBoundary);
+                canvas.renderAll();
+                alert('Boundary is now editable. Move or resize it, then click outside to lock it again.');
+
+                canvas.on('selection:cleared', function lockBoundary() {
+                    if (propertyBoundary) {
+                        propertyBoundary.set({ selectable: false, evented: false });
+                        canvas.renderAll();
+                        saveState();
+                    }
+                    canvas.off('selection:cleared', lockBoundary);
+                });
+            }
+        }
+
+        function addCoordRow() {
+            const container = document.getElementById('polygon-coords-input');
+            const row = document.createElement('div');
+            row.className = 'coord-row';
+            row.innerHTML = `
+                <input type="number" placeholder="X" class="coord-x">
+                <input type="number" placeholder="Y" class="coord-y">
+                <button onclick="removeCoordRow(this)">Remove</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function removeCoordRow(btn) {
+            const coordInputs = document.querySelectorAll('#polygon-coords-input .coord-row');
+            if (coordInputs.length > 3) {
+                btn.parentElement.remove();
+            } else {
+                alert('A polygon must have at least 3 points.');
+            }
+        }
+
+        // Global functions for inline onclick handlers
+        window.addCoordRow = addCoordRow;
+        window.removeCoordRow = removeCoordRow;
+
+        // ==================== Canvas Navigation ====================
+        function changeGridScale() {
+            const oldScale = gridScale;
+            const newScale = parseFloat(document.getElementById('grid-scale-select').value);
+
+            if (oldScale === newScale) return;
+
+            gridScale = newScale;
+            document.getElementById('scale-value').textContent = gridScale;
+
+            // Update scale bar
+            const scaleBarValue = gridScale * 100;
+            document.getElementById('scale-bar-value').textContent = scaleBarValue;
+
+            // Calculate scale ratio
+            const scaleRatio = oldScale / newScale;
+
+            // Update all objects on canvas
+            canvas.getObjects().forEach(obj => {
+                if (obj.isGrid || obj.isBoundary) {
+                    // Update boundary
+                    if (obj.isBoundary) {
+                        obj.set({
+                            scaleX: (obj.scaleX || 1) * scaleRatio,
+                            scaleY: (obj.scaleY || 1) * scaleRatio,
+                            left: obj.left * scaleRatio,
+                            top: obj.top * scaleRatio
+                        });
+                    }
+                } else if (obj.objectType === 'placed-object') {
+                    // Update placed objects
+                    obj.set({
+                        scaleX: (obj.scaleX || 1) * scaleRatio,
+                        scaleY: (obj.scaleY || 1) * scaleRatio,
+                        left: obj.left * scaleRatio,
+                        top: obj.top * scaleRatio
+                    });
+                }
+            });
+
+            canvas.renderAll();
+            saveState();
+        }
+
+        function fitToProperty() {
+            if (!propertyBoundary) return;
+
+            const boundingRect = propertyBoundary.getBoundingRect();
+            const padding = 50;
+
+            const scaleX = (canvas.width - padding * 2) / boundingRect.width;
+            const scaleY = (canvas.height - padding * 2) / boundingRect.height;
+            const zoom = Math.min(scaleX, scaleY);
+
+            canvas.setZoom(zoom);
+
+            const center = propertyBoundary.getCenterPoint();
+            canvas.absolutePan({
+                x: center.x * zoom - canvas.width / 2,
+                y: center.y * zoom - canvas.height / 2
+            });
+
+            updateZoomIndicator();
+            canvas.renderAll();
+        }
+
+        function updateZoomIndicator() {
+            const zoom = canvas.getZoom();
+            document.getElementById('zoom-value').textContent = Math.round(zoom * 100);
+        }
+
+        // ==================== Measurement Tools ====================
+        function toggleMeasureMode() {
+            measureMode = !measureMode;
+            const btn = document.getElementById('measure-btn');
+            const instruction = document.getElementById('measure-instruction');
+
+            if (measureMode) {
+                btn.classList.add('active');
+                instruction.classList.add('visible');
+                measurePoints = [];
+                if (measureLine) {
+                    canvas.remove(measureLine);
+                    measureLine = null;
+                }
+            } else {
+                btn.classList.remove('active');
+                instruction.classList.remove('visible');
+                if (measureLine) {
+                    canvas.remove(measureLine);
+                    measureLine = null;
+                }
+                canvas.renderAll();
+            }
+        }
+
+        function handleMeasureClick(options) {
+            const pointer = canvas.getPointer(options.e);
+            measurePoints.push({ x: pointer.x, y: pointer.y });
+
+            if (measurePoints.length === 2) {
+                const scaleMultiplier = 20 / gridScale;
+                const distance = Math.sqrt(
+                    Math.pow(measurePoints[1].x - measurePoints[0].x, 2) +
+                    Math.pow(measurePoints[1].y - measurePoints[0].y, 2)
+                ) / scaleMultiplier;
+
+                // Remove old measure line if exists
+                if (measureLine) {
+                    canvas.remove(measureLine);
+                }
+
+                // Draw line
+                const line = new fabric.Line([
+                    measurePoints[0].x, measurePoints[0].y,
+                    measurePoints[1].x, measurePoints[1].y
+                ], {
+                    stroke: '#3498db',
+                    strokeWidth: 3,
+                    selectable: false,
+                    evented: false,
+                    strokeDashArray: [5, 5]
+                });
+
+                // Add distance text
+                const midX = (measurePoints[0].x + measurePoints[1].x) / 2;
+                const midY = (measurePoints[0].y + measurePoints[1].y) / 2;
+
+                const text = new fabric.Text(`${distance.toFixed(2)} ft`, {
+                    left: midX,
+                    top: midY,
+                    fontSize: 14,
+                    fill: '#3498db',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    originX: 'center',
+                    originY: 'center',
+                    selectable: false,
+                    evented: false
+                });
+
+                measureLine = new fabric.Group([line, text], {
+                    selectable: false,
+                    evented: false
+                });
+
+                canvas.add(measureLine);
+                canvas.renderAll();
+
+                // Reset for next measurement
+                measurePoints = [];
+            }
+        }
+
+        // ==================== Properties Panel ====================
+        function updatePropertiesPanel() {
+            const activeObject = canvas.getActiveObject();
+            if (!activeObject || activeObject.isBoundary) {
+                hidePropertiesPanel();
+                return;
+            }
+
+            const panel = document.getElementById('properties-panel');
+            const content = document.getElementById('properties-content');
+
+            const scaleMultiplier = 20 / gridScale;
+
+            let html = '';
+
+            if (activeObject.objectData) {
+                html += `<div class="property-row">
+                    <span class="property-label">Type:</span>
+                    <span class="property-value">${activeObject.objectData.name}</span>
+                </div>`;
+
+                html += `<div class="property-row">
+                    <span class="property-label">Category:</span>
+                    <span class="property-value">${activeObject.category}</span>
+                </div>`;
+            }
+
+            const width = (activeObject.width * activeObject.scaleX) / scaleMultiplier;
+            const height = (activeObject.height * activeObject.scaleY) / scaleMultiplier;
+
+            html += `<div class="property-row">
+                <span class="property-label">Width:</span>
+                <span class="property-value">${width.toFixed(1)} ft</span>
+            </div>`;
+
+            html += `<div class="property-row">
+                <span class="property-label">Height:</span>
+                <span class="property-value">${height.toFixed(1)} ft</span>
+            </div>`;
+
+            // Calculate area
+            const area = width * height;
+            html += `<div class="property-row">
+                <span class="property-label">Area:</span>
+                <span class="property-value">${area.toFixed(1)} sq ft</span>
+            </div>`;
+
+            html += `<div class="property-row">
+                <span class="property-label">Position X:</span>
+                <span class="property-value">${(activeObject.left / scaleMultiplier).toFixed(1)} ft</span>
+            </div>`;
+
+            html += `<div class="property-row">
+                <span class="property-label">Position Y:</span>
+                <span class="property-value">${(activeObject.top / scaleMultiplier).toFixed(1)} ft</span>
+            </div>`;
+
+            if (activeObject.angle) {
+                html += `<div class="property-row">
+                    <span class="property-label">Rotation:</span>
+                    <span class="property-value">${activeObject.angle.toFixed(0)}°</span>
+                </div>`;
+            }
+
+            content.innerHTML = html;
+            panel.classList.add('visible');
+        }
+
+        function hidePropertiesPanel() {
+            document.getElementById('properties-panel').classList.remove('visible');
+        }
+
+        // ==================== Object Manipulation ====================
+        function deleteSelected() {
+            const activeObjects = canvas.getActiveObjects();
+            if (activeObjects.length > 0) {
+                activeObjects.forEach(obj => {
+                    if (!obj.isBoundary && !obj.isGrid) {
+                        canvas.remove(obj);
+                    }
+                });
+                canvas.discardActiveObject();
+                canvas.renderAll();
+                saveState();
+            }
+        }
+
+        function duplicateSelected() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && !activeObject.isBoundary && !activeObject.isGrid) {
+                activeObject.clone((cloned) => {
+                    cloned.set({
+                        left: cloned.left + 20,
+                        top: cloned.top + 20
+                    });
+                    canvas.add(cloned);
+                    canvas.setActiveObject(cloned);
+                    canvas.renderAll();
+                    saveState();
+                });
+            }
+        }
+
+        // ==================== Keyboard Shortcuts ====================
+        function handleKeyboard(e) {
+            // Delete
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    deleteSelected();
+                }
+            }
+
+            // Duplicate (Ctrl+D)
+            if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                duplicateSelected();
+            }
+
+            // Undo (Ctrl+Z)
+            if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            }
+
+            // Redo (Ctrl+Shift+Z)
+            if (e.ctrlKey && e.shiftKey && e.key === 'z') {
+                e.preventDefault();
+                redo();
+            }
+        }
+
+        // ==================== Undo/Redo ====================
+        function saveState() {
+            const state = JSON.stringify(canvas.toJSON(['objectData', 'category', 'isBoundary', 'boundaryData']));
+            undoStack.push(state);
+            redoStack = [];
+
+            // Limit undo stack size
+            if (undoStack.length > 50) {
+                undoStack.shift();
+            }
+
+            autoSave();
+        }
+
+        function undo() {
+            if (undoStack.length > 1) {
+                const currentState = undoStack.pop();
+                redoStack.push(currentState);
+                const previousState = undoStack[undoStack.length - 1];
+                loadState(previousState);
+            }
+        }
+
+        function redo() {
+            if (redoStack.length > 0) {
+                const state = redoStack.pop();
+                undoStack.push(state);
+                loadState(state);
+            }
+        }
+
+        function loadState(state) {
+            canvas.loadFromJSON(state, () => {
+                // Re-find property boundary
+                propertyBoundary = canvas.getObjects().find(obj => obj.isBoundary);
+                canvas.renderAll();
+                drawGrid();
+                if (propertyBoundary) {
+                    canvas.sendToBack(propertyBoundary);
+                }
+                canvas.renderAll();
+            });
+        }
+
+        // ==================== Save/Load/Export ====================
+        function saveProject() {
+            const data = {
+                canvas: canvas.toJSON(['objectData', 'category', 'isBoundary', 'boundaryData']),
+                gridScale: gridScale,
+                version: '1.0'
+            };
+
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `yard-plan-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+
+            URL.revokeObjectURL(url);
+        }
+
+        function loadProject(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const data = JSON.parse(event.target.result);
+
+                    if (data.gridScale) {
+                        gridScale = data.gridScale;
+                        document.getElementById('grid-scale-select').value = gridScale;
+                        document.getElementById('scale-value').textContent = gridScale;
+                    }
+
+                    canvas.loadFromJSON(data.canvas, () => {
+                        propertyBoundary = canvas.getObjects().find(obj => obj.isBoundary);
+                        canvas.renderAll();
+                        drawGrid();
+                        if (propertyBoundary) {
+                            canvas.sendToBack(propertyBoundary);
+                        }
+                        canvas.renderAll();
+                        saveState();
+                        fitToProperty();
+                    });
+                } catch (err) {
+                    alert('Error loading file: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+
+            // Reset file input
+            e.target.value = '';
+        }
+
+        function exportToPNG() {
+            const dataURL = canvas.toDataURL({
+                format: 'png',
+                quality: 1,
+                multiplier: 2
+            });
+
+            const link = document.createElement('a');
+            link.download = `yard-plan-${new Date().toISOString().slice(0, 10)}.png`;
+            link.href = dataURL;
+            link.click();
+        }
+
+        function autoSave() {
+            const data = {
+                canvas: canvas.toJSON(['objectData', 'category', 'isBoundary', 'boundaryData']),
+                gridScale: gridScale,
+                version: '1.0'
+            };
+            localStorage.setItem('yardPlannerAutoSave', JSON.stringify(data));
+        }
+
+        function restoreFromLocalStorage() {
+            const saved = localStorage.getItem('yardPlannerAutoSave');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+
+                    if (data.gridScale) {
+                        gridScale = data.gridScale;
+                        document.getElementById('grid-scale-select').value = gridScale;
+                        document.getElementById('scale-value').textContent = gridScale;
+                    }
+
+                    canvas.loadFromJSON(data.canvas, () => {
+                        propertyBoundary = canvas.getObjects().find(obj => obj.isBoundary);
+                        canvas.renderAll();
+                        drawGrid();
+                        if (propertyBoundary) {
+                            canvas.sendToBack(propertyBoundary);
+                        }
+                        canvas.renderAll();
+                        saveState();
+                    });
+                } catch (err) {
+                    console.error('Error restoring from localStorage:', err);
+                }
+            }
+        }
+
+        // ==================== Initialize on Load ====================
+        window.addEventListener('DOMContentLoaded', () => {
+            initCanvas();
+            initObjectPalette();
+            initLayersPanel();
+        });
+    </script>
+</body>
+</html>
