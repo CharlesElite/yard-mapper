@@ -1756,10 +1756,157 @@
             document.getElementById('templates-modal').classList.remove('visible');
         }
 
+        const propertyTemplates = {
+            'suburban': {
+                name: 'Suburban Backyard',
+                description: '150×100 ft lot with house, garage, patio, and garden',
+                boundary: { type: 'rectangular', width: 150, depth: 100 },
+                objects: [
+                    { name: 'House', category: 'Structures', color: '#95a5a6', shape: 'rect', width: 40, height: 30, x: 75, y: 35 },
+                    { name: 'Garage', category: 'Structures', color: '#7f8c8d', shape: 'rect', width: 20, height: 20, x: 35, y: 35 },
+                    { name: 'Driveway', category: 'Hardscape', color: '#616a6b', shape: 'rect', width: 10, height: 40, x: 35, y: 15 },
+                    { name: 'Patio', category: 'Hardscape', color: '#bcaaa4', shape: 'rect', width: 20, height: 15, x: 75, y: 65 },
+                    { name: 'Garden Plot', category: 'Gardens', color: '#2ecc71', shape: 'rect', width: 15, height: 10, x: 120, y: 70 },
+                    { name: 'Tree', category: 'Landscape', color: '#1e8449', shape: 'circle', width: 8, height: 8, x: 130, y: 30 },
+                    { name: 'Tree', category: 'Landscape', color: '#1e8449', shape: 'circle', width: 8, height: 8, x: 25, y: 75 }
+                ]
+            },
+            'farm': {
+                name: 'Small Farm',
+                description: '510×230 ft property with barn, gardens, and pasture',
+                boundary: { type: 'rectangular', width: 510, depth: 230 },
+                objects: [
+                    { name: 'House', category: 'Structures', color: '#95a5a6', shape: 'rect', width: 40, height: 30, x: 100, y: 60 },
+                    { name: 'Barn', category: 'Structures', color: '#8b7355', shape: 'rect', width: 40, height: 50, x: 200, y: 80 },
+                    { name: 'Garden Plot', category: 'Gardens', color: '#2ecc71', shape: 'rect', width: 30, height: 30, x: 150, y: 150 },
+                    { name: 'Garden Plot', category: 'Gardens', color: '#2ecc71', shape: 'rect', width: 30, height: 30, x: 200, y: 150 },
+                    { name: 'Greenhouse', category: 'Gardens', color: '#a8e6cf', shape: 'rect', width: 15, height: 25, x: 250, y: 150 },
+                    { name: 'Driveway', category: 'Hardscape', color: '#616a6b', shape: 'rect', width: 12, height: 80, x: 80, y: 40 },
+                    { name: 'Well', category: 'Utility', color: '#5499c7', shape: 'circle', width: 3, height: 3, x: 120, y: 100 },
+                    { name: 'Tree Line', category: 'Landscape', color: '#145a32', shape: 'rect', width: 450, height: 10, x: 255, y: 30 }
+                ]
+            },
+            'urban': {
+                name: 'Urban Lot',
+                description: '60×100 ft narrow city lot with small yard',
+                boundary: { type: 'rectangular', width: 60, depth: 100 },
+                objects: [
+                    { name: 'House', category: 'Structures', color: '#95a5a6', shape: 'rect', width: 35, height: 40, x: 30, y: 35 },
+                    { name: 'Patio', category: 'Hardscape', color: '#bcaaa4', shape: 'rect', width: 20, height: 15, x: 30, y: 75 },
+                    { name: 'Raised Bed', category: 'Gardens', color: '#27ae60', shape: 'rect', width: 8, height: 4, x: 50, y: 75 },
+                    { name: 'Raised Bed', category: 'Gardens', color: '#27ae60', shape: 'rect', width: 8, height: 4, x: 50, y: 82 },
+                    { name: 'Path/Walkway', category: 'Hardscape', color: '#d7ccc8', shape: 'rect', width: 3, height: 30, x: 30, y: 15 }
+                ]
+            },
+            'estate': {
+                name: 'Estate Property',
+                description: '300×250 ft large estate with pool and gardens',
+                boundary: { type: 'rectangular', width: 300, depth: 250 },
+                objects: [
+                    { name: 'House', category: 'Structures', color: '#95a5a6', shape: 'rect', width: 60, height: 50, x: 120, y: 80 },
+                    { name: 'Garage', category: 'Structures', color: '#7f8c8d', shape: 'rect', width: 30, height: 25, x: 60, y: 80 },
+                    { name: 'Pool', category: 'Recreation', color: '#3498db', shape: 'rect', width: 20, height: 40, x: 180, y: 100 },
+                    { name: 'Patio', category: 'Hardscape', color: '#bcaaa4', shape: 'rect', width: 35, height: 25, x: 120, y: 130 },
+                    { name: 'Garden Plot', category: 'Gardens', color: '#2ecc71', shape: 'rect', width: 25, height: 25, x: 220, y: 150 },
+                    { name: 'Driveway', category: 'Hardscape', color: '#616a6b', shape: 'rect', width: 15, height: 60, x: 75, y: 45 },
+                    { name: 'Tree', category: 'Landscape', color: '#1e8449', shape: 'circle', width: 10, height: 10, x: 40, y: 150 },
+                    { name: 'Tree', category: 'Landscape', color: '#1e8449', shape: 'circle', width: 10, height: 10, x: 260, y: 150 },
+                    { name: 'Tree', category: 'Landscape', color: '#1e8449', shape: 'circle', width: 10, height: 10, x: 150, y: 210 }
+                ]
+            }
+        };
+
         function loadTemplates() {
-            // This will be implemented later
             const grid = document.getElementById('templates-grid');
-            grid.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 40px;">Templates coming soon!</p>';
+            grid.innerHTML = '';
+
+            Object.entries(propertyTemplates).forEach(([key, template]) => {
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    padding: 20px;
+                    border: 2px solid #e2e8f0;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    background: white;
+                `;
+                card.innerHTML = `
+                    <h3 style="font-size: 16px; font-weight: 700; color: #2d3748; margin-bottom: 8px;">${template.name}</h3>
+                    <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">${template.description}</p>
+                    <div style="font-size: 12px; color: #667eea; font-weight: 600;">Click to load →</div>
+                `;
+
+                card.addEventListener('mouseenter', () => {
+                    card.style.borderColor = '#667eea';
+                    card.style.transform = 'translateY(-4px)';
+                    card.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.15)';
+                });
+
+                card.addEventListener('mouseleave', () => {
+                    card.style.borderColor = '#e2e8f0';
+                    card.style.transform = 'translateY(0)';
+                    card.style.boxShadow = 'none';
+                });
+
+                card.addEventListener('click', () => {
+                    loadTemplate(template);
+                    hideTemplatesModal();
+                });
+
+                grid.appendChild(card);
+            });
+        }
+
+        function loadTemplate(template) {
+            // Clear canvas
+            canvas.clear();
+            canvas.backgroundColor = '#f5f5f0';
+
+            // Redraw grid
+            drawGrid();
+
+            // Create boundary
+            if (template.boundary.type === 'rectangular') {
+                const scaleMultiplier = 20 / gridScale;
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+
+                const boundary = new fabric.Rect({
+                    left: centerX - (template.boundary.width * scaleMultiplier / 2),
+                    top: centerY - (template.boundary.depth * scaleMultiplier / 2),
+                    width: template.boundary.width * scaleMultiplier,
+                    height: template.boundary.depth * scaleMultiplier,
+                    fill: 'transparent',
+                    stroke: '#e74c3c',
+                    strokeWidth: 4,
+                    selectable: false,
+                    evented: false,
+                    isBoundary: true,
+                    boundaryData: template.boundary
+                });
+
+                canvas.add(boundary);
+                propertyBoundary = boundary;
+                canvas.sendToBack(boundary);
+            }
+
+            // Place objects
+            const scaleMultiplier = 20 / gridScale;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const boundaryLeft = centerX - (template.boundary.width * scaleMultiplier / 2);
+            const boundaryTop = centerY - (template.boundary.depth * scaleMultiplier / 2);
+
+            template.objects.forEach(objData => {
+                const x = boundaryLeft + (objData.x * scaleMultiplier);
+                const y = boundaryTop + (objData.y * scaleMultiplier);
+                placeObject(objData, x, y);
+            });
+
+            // Fit to view
+            setTimeout(() => fitToProperty(), 100);
+
+            saveState();
         }
 
         // ==================== Layers Panel ====================
